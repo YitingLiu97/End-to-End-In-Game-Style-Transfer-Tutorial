@@ -1,5 +1,5 @@
 # End-to-End-In-Game-Style-Transfer-Tutorial
-![unity-style-transfer-screenshot](..\images\unity-style-transfer-screenshot.png)
+![unity-style-transfer-screenshot](\images\unity-style-transfer-screenshot.png)
 
 ## Tutorial Links
 

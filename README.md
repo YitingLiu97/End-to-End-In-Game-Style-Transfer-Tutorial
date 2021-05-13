@@ -10,3 +10,4 @@
 [Part 2](https://christianjmills.com/End-To-End-In-Game-Style-Transfer-Tutorial-2/): This post covers how to train an artistic style transfer model with PyTorch in Google Colab.
 
 [Part 3](https://christianjmills.com/End-To-End-In-Game-Style-Transfer-Tutorial-3/): This post covers how implement the style transfer model in Unity with the Barracuda library.
+

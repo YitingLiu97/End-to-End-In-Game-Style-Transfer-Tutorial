@@ -1,11 +1,7 @@
 # End-to-End-In-Game-Style-Transfer-Tutorial
 ![unity-style-transfer-screenshot](https://raw.githubusercontent.com/cj-mills/End-to-End-In-Game-Style-Transfer-Tutorial/main/images/unity-style-transfer-screenshot.png)
 
-**Note:** You might get an error like the one below in Unity, if you download the project from GitHub. 
-
-`AssetImporter is referencing an asset from the previous import. This should not happen.`
-
-You can fix this issue by rebuilding the Unit asset. 
+**Note:** Note: Complete the following steps before running the project for the first time.
 1. Open the Kinematica folder in the Assets section. 
 2. Double-click on the `Unit` asset.
 3. Click `Build` in the pop-up window. 

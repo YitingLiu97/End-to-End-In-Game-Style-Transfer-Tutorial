@@ -20,3 +20,7 @@ The project should run normally now. However, there might be some stuttering the
 
 [Part 3](https://christianjmills.com/End-To-End-In-Game-Style-Transfer-Tutorial-3/): This post covers how implement the style transfer model in Unity with the Barracuda library.
 
+## Follow Ups
+### Targeted In-Game Style Transfer
+* [GitHub Branch](https://github.com/cj-mills/End-to-End-In-Game-Style-Transfer-Tutorial-Intel/blob/targeted-style-transfer/README.md)
+* [Tutorial](https://christianjmills.com/Targeted-In-Game-Style-Transfer-Tutorial/)

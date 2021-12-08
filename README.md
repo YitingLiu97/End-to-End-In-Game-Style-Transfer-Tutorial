@@ -24,3 +24,6 @@ The project should run normally now. However, there might be some stuttering the
 ### Targeted In-Game Style Transfer
 * [GitHub Branch](https://github.com/cj-mills/End-to-End-In-Game-Style-Transfer-Tutorial-Intel/blob/targeted-style-transfer/README.md)
 * [Tutorial](https://christianjmills.com/Targeted-In-Game-Style-Transfer-Tutorial/)
+* 
+### Barracuda Style Transfer HDRP - 12/7/21
+* [GitHub Repository](https://github.com/cj-mills/Barracuda-Style-Transfer-HDRP)

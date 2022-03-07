@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿
 using UnityEngine;
 using Unity.Barracuda;
 
@@ -11,6 +10,9 @@ public class StyleTransfer : MonoBehaviour
     [Tooltip("Stylize the camera feed")]
     public bool stylizeImage = true;
 
+    [Tooltip("Stylize only specified GameObjects")]
+    public bool targetedStylization = true;
+
     [Tooltip("The height of the image being fed to the model")]
     public int targetHeight = 540;
 
@@ -19,6 +21,12 @@ public class StyleTransfer : MonoBehaviour
 
     [Tooltip("The backend used when performing inference")]
     public WorkerFactory.Type workerType = WorkerFactory.Type.Auto;
+
+    [Tooltip("Captures the depth data for the target GameObjects")]
+    public Camera styleDepth;
+
+    [Tooltip("Captures the depth data for the entire scene")]
+    public Camera sourceDepth;
 
     // The compiled model used for performing inference
     private Model m_RuntimeModel;
@@ -29,6 +37,17 @@ public class StyleTransfer : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        // Get the screen dimensions
+        int width = Screen.width;
+        int height = Screen.height;
+
+        // Force the StyleDepth Camera to render to a Depth texture
+        styleDepth.targetTexture = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.Depth);
+        styleDepth.forceIntoRenderTexture = true;
+        // Force the SourceDepth Camera to render to a Depth texture
+        sourceDepth.targetTexture = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.Depth);
+        sourceDepth.forceIntoRenderTexture = true;
+
         // Compile the model asset into an object oriented representation
         m_RuntimeModel = ModelLoader.Load(modelAsset);
 
@@ -36,11 +55,58 @@ public class StyleTransfer : MonoBehaviour
         engine = WorkerFactory.CreateWorker(workerType, m_RuntimeModel);
     }
 
+    private void Update()
+    {
+
+        if (styleDepth.targetTexture.width != Screen.width || styleDepth.targetTexture.height != Screen.height)
+        {
+            // Get the screen dimensions
+            int width = Screen.width;
+            int height = Screen.height;
+
+            // Assign depth textures with the new dimensions
+            styleDepth.targetTexture = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.Depth);
+            sourceDepth.targetTexture = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.Depth);
+        }
+
+        if (Input.GetMouseButtonUp(0))
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
+            if (Physics.Raycast(ray, out hit))
+            {
+                Transform[] allChildren = hit.transform.gameObject.GetComponentsInChildren<Transform>();
+
+                for (int i = 0; i < allChildren.Length; i++)
+                {
+                    MeshRenderer meshRenderer = allChildren[i].GetComponent<MeshRenderer>();
+                    if (meshRenderer != null && meshRenderer.enabled)
+                    {
+
+                        if (allChildren[i].gameObject.layer == 12)
+                        {
+                            allChildren[i].gameObject.layer = 0;
+                        }
+                        else
+                        {
+                            allChildren[i].gameObject.layer = 12;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // OnDisable is called when the MonoBehavior becomes disabled or inactive
     private void OnDisable()
     {
         // Release the resources allocated for the inference engine
         engine.Dispose();
+
+        // Release the Depth texture for the StyleDepth camera
+        RenderTexture.ReleaseTemporary(styleDepth.targetTexture);
+        // Release the Depth texture for the SourceDepth camera
+        RenderTexture.ReleaseTemporary(sourceDepth.targetTexture);
     }
 
     /// <summary>
@@ -72,6 +138,48 @@ public class StyleTransfer : MonoBehaviour
 
         // Copy the result into the source RenderTexture
         Graphics.Blit(result, image);
+
+        // Release the temporary RenderTexture
+        RenderTexture.ReleaseTemporary(result);
+    }
+
+    /// <summary>
+    /// Merge the stylized frame and the original frame on the GPU
+    /// </summary>
+    /// <param name="styleImage"></param>
+    /// <param name="sourceImage"></param>
+    /// <returns>The merged image</returns>
+    private void Merge(RenderTexture styleImage, RenderTexture sourceImage)
+    {
+        // Specify the number of threads on the GPU
+        int numthreads = 8;
+        // Get the index for the specified function in the ComputeShader
+        int kernelHandle = styleTransferShader.FindKernel("Merge");
+        // Define a temporary HDR RenderTexture
+        int width = styleImage.width;
+        int height = styleImage.height;
+        RenderTexture result = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGBHalf);
+        // Enable random write access
+        result.enableRandomWrite = true;
+        // Create the HDR RenderTexture
+        result.Create();
+
+        // Set the value for the Result variable in the ComputeShader
+        styleTransferShader.SetTexture(kernelHandle, "Result", result);
+        // Set the value for the InputImage variable in the ComputeShader
+        styleTransferShader.SetTexture(kernelHandle, "InputImage", styleImage);
+        // Set the value for the StyleDepth variable in the ComputeShader
+        styleTransferShader.SetTexture(kernelHandle, "StyleDepth", styleDepth.activeTexture);
+        // Set the value for the SrcDepth variable in the ComputeShader
+        styleTransferShader.SetTexture(kernelHandle, "SrcDepth", sourceDepth.activeTexture);
+        // Set the value for the SrcImage variable in the ComputeShader
+        styleTransferShader.SetTexture(kernelHandle, "SrcImage", sourceImage);
+
+        // Execute the ComputeShader
+        styleTransferShader.Dispatch(kernelHandle, result.width / numthreads, result.height / numthreads, 1);
+
+        // Copy the result into the source RenderTexture
+        Graphics.Blit(result, styleImage);
 
         // Release the temporary RenderTexture
         RenderTexture.ReleaseTemporary(result);
@@ -120,6 +228,7 @@ public class StyleTransfer : MonoBehaviour
 
         // Execute neural network with the provided input
         engine.Execute(input);
+
         // Get the raw model output
         Tensor prediction = engine.PeekOutput();
         // Release GPU resources allocated for the Tensor
@@ -149,11 +258,25 @@ public class StyleTransfer : MonoBehaviour
     /// <param name="dest">The texture for the targer display</param>
     void OnRenderImage(RenderTexture src, RenderTexture dest)
     {
+        // Create a temporary RenderTexture to store copy of the current frame
+        RenderTexture sourceImage = RenderTexture.GetTemporary(src.width, src.height, 24, src.format);
+        // Copyt the current frame
+        Graphics.Blit(src, sourceImage);
+
         if (stylizeImage)
         {
             StylizeImage(src);
+
+            if (targetedStylization)
+            {
+                // Merge the stylized frame and origina frame
+                Merge(src, sourceImage);
+            }
         }
 
         Graphics.Blit(src, dest);
+
+        // Release the temporary RenderTexture
+        RenderTexture.ReleaseTemporary(sourceImage);
     }
 }

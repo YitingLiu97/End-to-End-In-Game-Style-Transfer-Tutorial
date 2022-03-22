@@ -705,6 +705,11 @@ PrefabInstance:
       propertyPath: m_ShowToolkit
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 3111316227408820088, guid: 5b63747ea8790cd4ea4dc98336ff4d3e,
+        type: 3}
+      propertyPath: m_ShowCustomSorter
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4496486233566827576, guid: 5b63747ea8790cd4ea4dc98336ff4d3e,
         type: 3}
       propertyPath: m_Enabled
@@ -749,7 +754,7 @@ PrefabInstance:
         type: 3}
       propertyPath: modelAsset
       value: 
-      objectReference: {fileID: 5022602860645237092, guid: 3974e5c5c3e9d0f4db6bf5297870cbe1,
+      objectReference: {fileID: 5022602860645237092, guid: b6ed4d4bc0b53a645910099710eef280,
         type: 3}
     - target: {fileID: 4559524105686015885, guid: 5b63747ea8790cd4ea4dc98336ff4d3e,
         type: 3}
@@ -2568,7 +2573,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!64 &1866674227
 MeshCollider:
   m_ObjectHideFlags: 0

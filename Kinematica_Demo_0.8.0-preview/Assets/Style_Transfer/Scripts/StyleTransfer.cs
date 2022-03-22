@@ -11,7 +11,7 @@ public class StyleTransfer : MonoBehaviour
     public bool stylizeImage = true;
 
     [Tooltip("Stylize only specified GameObjects")]
-    public bool targetedStylization = true;
+    public bool targetedStylization = false;
 
     [Tooltip("The height of the image being fed to the model")]
     public int targetHeight = 540;

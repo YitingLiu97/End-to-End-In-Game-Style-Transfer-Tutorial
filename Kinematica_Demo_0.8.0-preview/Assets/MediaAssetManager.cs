@@ -2,31 +2,29 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class MediaAssetManager : MonoBehaviour
 {
     [SerializeField] List<string> videoExtensions, imageExtensions;
     [SerializeField] string imageFolder = "/Images";
     [SerializeField] string styleImageFolder = "/StylizedImages";
-    [SerializeField] Texture m_MainTexture, m_Normal, m_Metal;
-    Renderer m_Renderer;
+    [SerializeField] RectTransform stylizedImageRect;
+    [SerializeField] RawImage styleizedImage;
     public GameObject quad;
     public List<string> loadedMedia;
     int index;
-    float fileCounter;
     [SerializeField] Camera styleDesign;
     [SerializeField] Camera stylePencil;
+    [SerializeField] Canvas styleImageCanvas;
     [SerializeField] bool styleDesignCamOn = true;
     [SerializeField] bool stylePencilCamOn = false;
 
     void Start()
     {
-        m_Renderer = quad.GetComponent<Renderer>();
-        fileCounter = 0;
 
         styleDesign.enabled = styleDesignCamOn;
         stylePencil.enabled = stylePencilCamOn;
-
         LoadAllMedia();
         Debug.Log("loaded media is " + loadedMedia.Count);
     }
@@ -83,24 +81,49 @@ public class MediaAssetManager : MonoBehaviour
         tex.LoadImage(imageBytes);
         return tex;
     }
+
+
+
+    void ResizeImageToScreen(int i)
+    {
+        Vector2 size = ResizeImportedImage(i);
+        stylizedImageRect.sizeDelta = size;
+        Debug.Log($" changed size is {size}");
+
+    }
+
+
+    Vector2 ResizeImportedImage(int i)
+    {
+        Texture2D tex = ImageToTexture(i);
+        float ratio = tex.width / tex.height;
+        float changedHeight, changedWidth;
+        // tex is wider
+        if (ratio >= 1)
+        {
+            changedHeight = Screen.height;
+            changedWidth = Screen.height * tex.width / tex.height;
+        }
+        // tex is taller 
+        else
+        {
+            changedWidth = Screen.width;
+            changedHeight = Screen.width * tex.height / tex.width;
+
+        }
+
+        return new Vector2(changedWidth, changedHeight);
+
+    }
+
     // using arrow keys to change the image 
     void UpdateTextureToMaterial(int i)
     {
-        //Make sure to enable the Keywords
-        m_Renderer.material.EnableKeyword("_NORMALMAP");
-        m_Renderer.material.EnableKeyword("_METALLICGLOSSMAP");
-        m_MainTexture = ImageToTexture(i);
+        styleizedImage.texture = ImageToTexture(i);
 
         int length = loadedMedia[i].LastIndexOf(".") - loadedMedia[i].LastIndexOf(@"\");
         string imageName = loadedMedia[i].Substring(loadedMedia[i].LastIndexOf(@"\"), length);
-        m_MainTexture.name = imageName;
-
-        //Set the Texture you assign in the Inspector as the main texture (Or Albedo)
-        m_Renderer.material.SetTexture("_MainTex", m_MainTexture);
-
-        UpdateTextureSizeToScreenSize(ImageToTexture(i).width, ImageToTexture(i).height, false);
-
-        Debug.Log($"texture for image {m_MainTexture.name} is {ImageToTexture(i).width} and {ImageToTexture(i).height} ");
+        styleizedImage.texture.name = imageName;
 
     }
 
@@ -109,13 +132,12 @@ public class MediaAssetManager : MonoBehaviour
         Screen.SetResolution(width, height, fullScreen);
     }
 
-    IEnumerator SaveScreenCapture()
+    IEnumerator SaveScreenCapture(int width, int height)
     {
         yield return new WaitForEndOfFrame();
         DirectoryInfo stylizedImageFolderPath = new DirectoryInfo(Application.streamingAssetsPath + styleImageFolder);
 
-        int width = Screen.width;
-        int height = Screen.height;
+
         Texture2D tex = new Texture2D(width, height, TextureFormat.RGB24, false);
         tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
         tex.Apply();
@@ -125,42 +147,19 @@ public class MediaAssetManager : MonoBehaviour
 
         if (stylePencilCamOn)
         {
-            File.WriteAllBytes(stylizedImageFolderPath + "/" + m_MainTexture.name + "Pencil_stylized" + ".jpg", bytes);
+            File.WriteAllBytes(stylizedImageFolderPath + "/" + styleizedImage.texture.name + "Pencil_stylized" + ".jpg", bytes);
 
         }
         if (styleDesignCamOn)
         {
 
 
-            File.WriteAllBytes(stylizedImageFolderPath + "/" + m_MainTexture.name + "Design_stylized" + ".jpg", bytes);
+            File.WriteAllBytes(stylizedImageFolderPath + "/" + styleizedImage.texture.name + "Design_stylized" + ".jpg", bytes);
 
         }
 
 
     }
-
-
-    /* IEnumerator SaveImagesRelativeSize()
-     {
-         yield return new WaitForEndOfFrame();
-         DirectoryInfo stylizedImageFolderPath = new DirectoryInfo(Application.streamingAssetsPath + styleImageFolder);
-         FileInfo[] fileinfo = stylizedImageFolderPath.GetFiles("*.*");
-
-
-         int width = Screen.width;
-         int height = Screen.height;
-         Texture2D tex = new Texture2D(width, height, TextureFormat.RGB24, false);
-         tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-         tex.Apply();
-
-         byte[] bytes = ImageConversion.EncodeArrayToJPG(tex.GetRawTextureData(), tex.graphicsFormat, (uint)width, (uint)height);
-         Object.Destroy(tex);
-
-         File.WriteAllBytes(stylizedImageFolderPath + "/" + m_MainTexture.name + "stylized" + ".jpg", bytes);
-
-
-     }*/
-
 
 
     // Update is called once per frame
@@ -193,11 +192,13 @@ public class MediaAssetManager : MonoBehaviour
 
         }
 
+        styleImageCanvas.renderMode = RenderMode.ScreenSpaceCamera;
 
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
             styleDesignCamOn = true;
             stylePencilCamOn = false;
+            styleImageCanvas.worldCamera = styleDesign;
 
         }
 
@@ -206,6 +207,8 @@ public class MediaAssetManager : MonoBehaviour
 
             stylePencilCamOn = true;
             styleDesignCamOn = false;
+            styleImageCanvas.worldCamera = stylePencil;
+
 
         }
 
@@ -213,21 +216,30 @@ public class MediaAssetManager : MonoBehaviour
         stylePencil.enabled = stylePencilCamOn;
 
         UpdateTextureToMaterial(index);
-
-
-
-
-
+        // resize the imported images 
+        ResizeImageToScreen(index);
+        int width = (int)ResizeImportedImage(index).x;
+        int height = (int)ResizeImportedImage(index).y;
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            StartCoroutine(SaveScreenCapture());
+            StartCoroutine(SaveScreenCapture(width, height));
         }
     }
 
     private void OnDestroy()
     {
         StopAllCoroutines();
+
+        styleDesign.enabled = styleDesignCamOn;
+        stylePencil.enabled = stylePencilCamOn;
     }
 
+    private void OnDisable()
+    {
+        StopAllCoroutines();
+
+        styleDesign.enabled = styleDesignCamOn;
+        stylePencil.enabled = stylePencilCamOn;
+    }
 }

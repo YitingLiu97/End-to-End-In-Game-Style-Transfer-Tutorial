@@ -19,6 +19,8 @@ public class StyleTransfer : MonoBehaviour
     [Tooltip("The model asset file that will be used when performing inference")]
     public NNModel modelAsset;
 
+    public string modelFileNameInStreamingAsset;
+
     [Tooltip("The backend used when performing inference")]
     public WorkerFactory.Type workerType = WorkerFactory.Type.Auto;
 
@@ -51,6 +53,9 @@ public class StyleTransfer : MonoBehaviour
         // Compile the model asset into an object oriented representation
         m_RuntimeModel = ModelLoader.Load(modelAsset);
 
+        //m_RuntimeModel = ModelLoader.LoadFromStreamingAssets(modelFileNameInStreamingAsset);
+        // Debug.Log("file name is " + modelFileNameInStreamingAsset);
+        // m_RuntimeModel = ModelLoader.Load(modelFileNameInStreamingAsset);
         // Create a worker that will execute the model with the selected backend
         engine = WorkerFactory.CreateWorker(workerType, m_RuntimeModel);
     }
